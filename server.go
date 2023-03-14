@@ -6,12 +6,13 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v5"
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models"
 )
+
+var limit = 3
 
 func sortByIndiceCountRecord(records []*models.Record, indice []int) []*models.Record {
 	for i := 0; i < len(records); i++ {
@@ -32,8 +33,7 @@ func main() {
 		e.Router.GET(
 			"/api/custom/participants",
 			func(c echo.Context) error {
-				// declare a int variable to store the number of voters
-				var voters_count int
+				var votes_tmp, contre_votes_tmp []*models.Record
 
 				records, _ := app.Dao().FindRecordsByExpr("participants")
 				total_voters, _ := app.Dao().FindRecordsByExpr("votes")
@@ -42,26 +42,49 @@ func main() {
 
 				for i := 0; i < len(records); i++ {
 
-					p_id := records[i].GetId()
-					votes, err := app.Dao().FindRecordsByExpr("votes", dbx.HashExp{"participant": p_id})
-
-					if err != nil {
-						log.Println(err)
-						voters_count = 0
-
-					} else {
-						voters_count = len(votes)
-					}
-
 					// esorina aloha le description fa mavesatra
 					records[i].Set("description", nil)
+
+					apis.EnrichRecord(c, app.Dao(), records[i])
+
+					data := records[i].Expand()
+
+					// votes collection
+					if votes, ok := data["votes(participant)"].([]*models.Record); ok {
+						indice[i] = len(votes)
+						// get only max 3 votes in votes_tmp variable
+						if indice[i] > limit {
+							votes_tmp = votes[:limit]
+						} else {
+							votes_tmp = votes
+						}
+					} else {
+						indice[i] = 0
+						votes_tmp = []*models.Record{}
+					}
+
+					// contre_votes collection
+					if contre_votes, ok := data["contre_votes(participant)"].([]*models.Record); ok {
+						// get only max 3 votes in contre_votes variable
+						if len(contre_votes) > limit {
+							contre_votes_tmp = contre_votes[:limit]
+						} else {
+							contre_votes_tmp = contre_votes
+						}
+					} else {
+						contre_votes_tmp = []*models.Record{}
+					}
+
+					// set all data in expand
 					records[i].SetExpand(
 						map[string]interface{}{
-							"voters_count":    voters_count,
-							"voters_pourcent": fmt.Sprintf("%.2f ", float64(voters_count)/float64(len(total_voters))*100) + "%"},
+							"contre_votes_count": len(contre_votes_tmp),
+							"voters_count":       indice[i],
+							"voters_pourcent":    fmt.Sprintf("%.2f ", float64(indice[i])/float64(len(total_voters))*100) + "%",
+							"votes":              votes_tmp,
+							"contre_votes":       contre_votes_tmp,
+						},
 					)
-
-					indice[i] = voters_count
 				}
 
 				records = sortByIndiceCountRecord(records, indice)
