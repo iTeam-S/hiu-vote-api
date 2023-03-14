@@ -12,7 +12,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 )
 
-var limit = 3
+const limit = 3
 
 func sortByIndiceCountRecord(records []*models.Record, indice []int) []*models.Record {
 	for i := 0; i < len(records); i++ {
@@ -34,6 +34,7 @@ func main() {
 			"/api/custom/participants",
 			func(c echo.Context) error {
 				var votes_tmp, contre_votes_tmp []*models.Record
+				var contre_votes_count int
 
 				records, _ := app.Dao().FindRecordsByExpr("participants")
 				total_voters, _ := app.Dao().FindRecordsByExpr("votes")
@@ -66,23 +67,25 @@ func main() {
 					// contre_votes collection
 					if contre_votes, ok := data["contre_votes(participant)"].([]*models.Record); ok {
 						// get only max 3 votes in contre_votes variable
-						if len(contre_votes) > limit {
+						contre_votes_count = len(contre_votes)
+						if contre_votes_count > limit {
 							contre_votes_tmp = contre_votes[:limit]
 						} else {
 							contre_votes_tmp = contre_votes
 						}
 					} else {
 						contre_votes_tmp = []*models.Record{}
+						contre_votes_count = 0
 					}
 
 					// set all data in expand
 					records[i].SetExpand(
 						map[string]interface{}{
-							"contre_votes_count": len(contre_votes_tmp),
-							"voters_count":       indice[i],
-							"voters_pourcent":    fmt.Sprintf("%.2f ", float64(indice[i])/float64(len(total_voters))*100) + "%",
-							"votes":              votes_tmp,
-							"contre_votes":       contre_votes_tmp,
+							"contre_votes_count":   contre_votes_count,
+							"contre_votes_preview": contre_votes_tmp,
+							"voters_count":         indice[i],
+							"participant_pourcent": fmt.Sprintf("%.2f ", float64(indice[i])/float64(len(total_voters))*100) + "%",
+							"votes_preview":        votes_tmp,
 						},
 					)
 				}
