@@ -44,7 +44,7 @@ func main() {
 				for i := 0; i < len(records); i++ {
 
 					// esorina aloha le description fa mavesatra
-					//records[i].Set("description", nil)
+					records[i].Set("description", nil)
 
 					apis.EnrichRecord(c, app.Dao(), records[i])
 
