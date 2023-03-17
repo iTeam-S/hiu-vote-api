@@ -44,7 +44,7 @@ func main() {
 				for i := 0; i < len(records); i++ {
 
 					// esorina aloha le description fa mavesatra
-					records[i].Set("description", nil)
+					//records[i].Set("description", nil)
 
 					apis.EnrichRecord(c, app.Dao(), records[i])
 
@@ -84,7 +84,7 @@ func main() {
 							"contre_votes_count":   contre_votes_count,
 							"contre_votes_preview": contre_votes_tmp,
 							"voters_count":         indice[i],
-							"participant_pourcent": fmt.Sprintf("%.2f", float64(indice[i])/float64(len(total_voters))*100),
+							"participant_pourcent": fmt.Sprintf("%.2f", float64(indice[i])/float64(len(total_voters))*100) + " %",
 							"votes_preview":        votes_tmp,
 						},
 					)
