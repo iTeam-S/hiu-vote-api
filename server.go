@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
@@ -13,6 +15,21 @@ import (
 )
 
 const limit = 3
+
+func chooseRandomlyInResult(records []*models.Record, limit int) []*models.Record {
+	selectedVotes := make([]*models.Record, 0)
+
+	// misafidy 3 votes/contre_votes atao patiny par hasard
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < limit; i++ {
+		randIndex := r.Intn(len(records))
+		selectedVotes = append(selectedVotes, records[randIndex])
+		// esorina izay efa vo safidy mba tsy afaka voafidy indray
+		records = append(records[:randIndex], records[randIndex+1:]...)
+	}
+
+	return selectedVotes
+}
 
 func sortByIndiceCountRecord(records []*models.Record, indice []int) []*models.Record {
 	for i := 0; i < len(records); i++ {
@@ -55,7 +72,7 @@ func main() {
 						indice[i] = len(votes)
 						// get only max 3 votes in votes_tmp variable
 						if indice[i] > limit {
-							votes_tmp = votes[:limit]
+							votes_tmp = chooseRandomlyInResult(votes, limit)
 						} else {
 							votes_tmp = votes
 						}
@@ -69,7 +86,7 @@ func main() {
 						// get only max 3 votes in contre_votes variable
 						contre_votes_count = len(contre_votes)
 						if contre_votes_count > limit {
-							contre_votes_tmp = contre_votes[:limit]
+							contre_votes_tmp = chooseRandomlyInResult(contre_votes, limit)
 						} else {
 							contre_votes_tmp = contre_votes
 						}
