@@ -51,10 +51,17 @@ func main() {
 			"/api/custom/participants",
 			func(c echo.Context) error {
 				var votes_tmp, contre_votes_tmp []*models.Record
-				var contre_votes_count int
+				var contre_votes_count, total_voters int
 
 				records, _ := app.Dao().FindRecordsByExpr("participants")
-				total_voters, _ := app.Dao().FindRecordsByExpr("votes")
+
+				//total_voters, _ := app.Dao().FindRecordsByExpr("votes")
+				// make a query to get total votes directly from database
+				err := app.DB().Select("count(*)").From("votes").Row(&total_voters)
+
+				if err != nil {
+					return err
+				}
 
 				indice := make([]int, len(records))
 
@@ -101,7 +108,7 @@ func main() {
 							"contre_votes_count":   contre_votes_count,
 							"contre_votes_preview": contre_votes_tmp,
 							"voters_count":         indice[i],
-							"participant_pourcent": fmt.Sprintf("%.2f", float64(indice[i])/float64(len(total_voters))*100) + " %",
+							"participant_pourcent": fmt.Sprintf("%.2f", float64(indice[i])/float64(total_voters)*100) + " %",
 							"votes_preview":        votes_tmp,
 						},
 					)
