@@ -54,27 +54,16 @@ func main() {
 				var contre_votes_count, total_voters int
 
 				records, _ := app.Dao().FindRecordsByExpr("participants")
-
-				//total_voters, _ := app.Dao().FindRecordsByExpr("votes")
-				// make a query to get total votes directly from database
-				err := app.DB().Select("count(*)").From("votes").Row(&total_voters)
-
-				if err != nil {
-					return err
-				}
+				app.DB().Select("count(*)").From("votes").Row(&total_voters)
 
 				indice := make([]int, len(records))
-
 				for i := 0; i < len(records); i++ {
-
 					// esorina aloha le description fa mavesatra
 					records[i].Set("description", nil)
-
 					apis.EnrichRecord(c, app.Dao(), records[i])
 
 					data := records[i].Expand()
 
-					// votes collection
 					if votes, ok := data["votes(participant)"].([]*models.Record); ok {
 						indice[i] = len(votes)
 						// get only max 3 votes in votes_tmp variable
@@ -88,7 +77,6 @@ func main() {
 						votes_tmp = []*models.Record{}
 					}
 
-					// contre_votes collection
 					if contre_votes, ok := data["contre_votes(participant)"].([]*models.Record); ok {
 						// get only max 3 votes in contre_votes variable
 						contre_votes_count = len(contre_votes)
