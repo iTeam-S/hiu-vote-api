@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -45,6 +46,45 @@ func sortByIndiceCountRecord(records []*models.Record, indice []int) []*models.R
 
 func main() {
 	app := pocketbase.New()
+
+	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+		e.Router.GET(
+			"/api/custom/participants/lite",
+			func(c echo.Context) error {
+				var total_voters int
+				var vote_participant, contre_votes_participant int
+
+				records, _ := app.Dao().FindRecordsByExpr("participants")
+				app.Dao().DB().Select("count(*)").From("votes").Row(&total_voters)
+
+				indice := make([]int, len(records))
+				for i := 0; i < len(records); i++ {
+					records[i].Set("description", nil)
+
+					app.Dao().DB().Select("count(*)").From("votes").Where(dbx.HashExp{"participant": records[i].GetId()}).Row(&vote_participant)
+					app.Dao().DB().Select("count(*)").From("contre_votes").Where(dbx.HashExp{"participant": records[i].GetId()}).Row(&contre_votes_participant)
+
+					// set all data in expand
+					records[i].SetExpand(
+						map[string]interface{}{
+							"contre_votes_count":   contre_votes_participant,
+							"voters_count":         vote_participant,
+							"participant_pourcent": fmt.Sprintf("%.2f", float64(vote_participant)/float64(total_voters)*100) + " %",
+						},
+					)
+
+					indice[i] = vote_participant
+
+				}
+
+				records = sortByIndiceCountRecord(records, indice)
+
+				return c.JSON(http.StatusOK, records)
+			},
+			apis.ActivityLogger(app),
+		)
+		return nil
+	})
 
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		e.Router.GET(
